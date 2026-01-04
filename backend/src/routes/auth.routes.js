@@ -18,6 +18,7 @@ const loginValidation = [
   body('password').notEmpty()
 ];
 
+
 // Public routes
 router.post('/register', registerValidation, validate, authController.register);
 router.post('/login', loginValidation, validate, authController.login);
