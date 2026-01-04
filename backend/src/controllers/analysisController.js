@@ -14,6 +14,14 @@ const Tesseract = require('tesseract.js');
 
 class AnalysisController {
   
+  constructor() {
+    // ✅ FIX: Bind 'this' to preserve access to private helper methods
+    this.analyzeImage = this.analyzeImage.bind(this);
+    this.getHistory = this.getHistory.bind(this);
+    this.getAnalysis = this.getAnalysis.bind(this);
+    this.submitFeedback = this.submitFeedback.bind(this);
+  }
+
   /**
    * Analyze ingredient image
    * POST /api/v1/analysis/image
@@ -32,7 +40,6 @@ class AnalysisController {
       }
       
       // 2. OCR Extraction (Tesseract.js)
-      // We process this on the backend to keep the frontend light
       console.log(`[Analysis] Starting OCR for user ${userId}...`);
       const ocrStart = Date.now();
       
@@ -49,6 +56,7 @@ class AnalysisController {
       console.log(`[Analysis] OCR Complete (${ocrTime}ms). Confidence: ${confidence}%`);
       
       // 3. Text Pre-processing
+      // ✅ FIX: Now 'this' refers to the class, so this works
       const cleanedText = this._cleanExtractedText(text);
       
       // Fail fast if image was too blurry or had no text
@@ -64,11 +72,6 @@ class AnalysisController {
       
       // 5. AI Inference Pipeline (Gemini)
       const aiStart = Date.now();
-      
-      // Parallel execution for speed? 
-      // No, strictly sequential here because Analysis might depend on Intent.
-      // However, we can run Intent and Analysis in parallel if Analysis doesn't strictly need the Intent object yet.
-      // For higher quality, we run Intent first to feed it into Analysis context.
       
       // A. Infer Intent (What is the user looking for?)
       const intent = await geminiService.inferIntent(
@@ -87,8 +90,6 @@ class AnalysisController {
       // 6. Save to Database
       const savedAnalysis = await Analysis.create({
         userId,
-        // We only store the extracted text and results, not the full Base64 image 
-        // (to save DB space, unless you have GridFS or S3 set up)
         extractedText: {
           raw: text,
           cleaned: cleanedText,
@@ -104,7 +105,7 @@ class AnalysisController {
           context: {
             productType: this._inferProductType(cleanedText),
             intendedUse: intent.primaryGoal,
-            consumptionFrequency: 'occasional', // Default, could be inferred
+            consumptionFrequency: 'occasional',
             riskLevel: this._calculateRiskLevel(analysisResult)
           }
         },
@@ -119,7 +120,6 @@ class AnalysisController {
       });
       
       // 7. Background Task: Update User Behavior Profile
-      // (Fire and forget, don't await)
       this._updateUserBehavior(userId, savedAnalysis).catch(err => 
         console.error('Failed to update user behavior:', err)
       );
@@ -140,7 +140,7 @@ class AnalysisController {
       
     } catch (error) {
       console.error('❌ [AnalysisController] Error:', error);
-      next(error); // Pass to global error handler
+      next(error); 
     }
   }
   
@@ -157,7 +157,7 @@ class AnalysisController {
         .sort({ createdAt: -1 })
         .limit(limit * 1)
         .skip((page - 1) * limit)
-        .select('insights.summary extractedText.cleaned createdAt processingTime'); // Optimize query
+        .select('insights.summary extractedText.cleaned createdAt processingTime'); 
       
       const total = await Analysis.countDocuments({ userId });
       
@@ -250,21 +250,14 @@ class AnalysisController {
   
   // --- Private Helpers ---
 
-  /**
-   * Clean extracted text from OCR
-   * Removes noise and non-text characters common in OCR
-   */
   _cleanExtractedText(text) {
     if (!text) return '';
     return text
-      .replace(/[^\w\s,.:()%-]/g, ' ') // Replace weird chars with space
-      .replace(/\s+/g, ' ') // Collapse multiple spaces
+      .replace(/[^\w\s,.:()%-]/g, ' ') 
+      .replace(/\s+/g, ' ') 
       .trim();
   }
   
-  /**
-   * Get user context for personalization
-   */
   async _getUserContext(userId) {
     const user = await User.findById(userId);
     
@@ -276,9 +269,6 @@ class AnalysisController {
     };
   }
   
-  /**
-   * Simple heuristic to guess product type from text
-   */
   _inferProductType(text) {
     const lowerText = text.toLowerCase();
     
@@ -291,17 +281,12 @@ class AnalysisController {
     return 'general';
   }
   
-  /**
-   * Calculate risk level from analysis summary
-   */
   _calculateRiskLevel(analysis) {
     if (!analysis.summary) return 'low';
     
-    // If verdict is 'avoid', risk is high
     if (analysis.summary.verdict === 'avoid') return 'high';
     if (analysis.summary.verdict === 'concerning') return 'medium';
     
-    // Otherwise use score
     const score = analysis.summary.score || 50;
     
     if (score >= 80) return 'low';
@@ -309,9 +294,6 @@ class AnalysisController {
     return 'high';
   }
   
-  /**
-   * Update user behavior profile based on analysis
-   */
   async _updateUserBehavior(userId, analysis) {
     const hour = new Date().getHours();
     
@@ -320,12 +302,10 @@ class AnalysisController {
     else if (hour >= 17 && hour < 22) timeSlot = 'evening';
     else if (hour >= 22 || hour < 5) timeSlot = 'night';
     
-    // Update user profile with scan time and potential concerns found
     await User.findByIdAndUpdate(userId, {
       $inc: {
         [`behaviorProfile.scanPatterns.${timeSlot}`]: 1
       },
-      // Optionally track categories if you add category to analysis schema
       $set: { lastActive: new Date() }
     });
   }

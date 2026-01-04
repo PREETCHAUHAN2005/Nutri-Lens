@@ -102,7 +102,7 @@ const AnalysisView = ({ analysis, onStartChat }) => {
           <div className="p-4 bg-white space-y-4">
             {reasoningSteps.map((step, idx) => (
               <div key={idx} className="flex gap-3">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
+                <div className="shrink-0 w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
                   {idx + 1}
                 </div>
                 <div>

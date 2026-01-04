@@ -1,7 +1,6 @@
 /**
  * Authentication Controller
- * 
- * Handles user registration, login, and profile management.
+ * * Handles user registration, login, and profile management.
  */
 
 const jwt = require('jsonwebtoken');
@@ -9,6 +8,14 @@ const User = require('../models/User');
 
 class AuthController {
   
+  constructor() {
+    // ✅ FIX: Bind 'this' so methods can access _generateToken and other class properties
+    this.register = this.register.bind(this);
+    this.login = this.login.bind(this);
+    this.getProfile = this.getProfile.bind(this);
+    this.updatePreferences = this.updatePreferences.bind(this);
+  }
+
   /**
    * Register new user
    * POST /api/v1/auth/register
@@ -41,7 +48,8 @@ class AuthController {
         success: true,
         message: 'Registration successful',
         data: {
-          user: user.getPublicProfile(),
+          // Ensure getPublicProfile exists in User model, or manually select fields
+          user: user.getPublicProfile ? user.getPublicProfile() : { id: user._id, name: user.name, email: user.email },
           token
         }
       });
@@ -70,6 +78,7 @@ class AuthController {
       }
       
       // Check password
+      // Make sure comparePassword is defined in your User model
       const isPasswordValid = await user.comparePassword(password);
       
       if (!isPasswordValid) {
@@ -79,7 +88,7 @@ class AuthController {
         });
       }
       
-      // Update last login
+      // Update last login (Optional: check if field exists in schema)
       user.lastLogin = new Date();
       await user.save();
       
@@ -90,7 +99,7 @@ class AuthController {
         success: true,
         message: 'Login successful',
         data: {
-          user: user.getPublicProfile(),
+          user: user.getPublicProfile ? user.getPublicProfile() : { id: user._id, name: user.name, email: user.email },
           token
         }
       });
@@ -106,6 +115,7 @@ class AuthController {
    */
   async getProfile(req, res, next) {
     try {
+      // req.user.id comes from your auth middleware
       const user = await User.findById(req.user.id);
       
       if (!user) {
@@ -117,7 +127,7 @@ class AuthController {
       
       return res.status(200).json({
         success: true,
-        data: user.getPublicProfile()
+        data: user.getPublicProfile ? user.getPublicProfile() : { id: user._id, name: user.name, email: user.email }
       });
       
     } catch (error) {
@@ -143,7 +153,7 @@ class AuthController {
       return res.status(200).json({
         success: true,
         message: 'Preferences updated successfully',
-        data: user.getPublicProfile()
+        data: user.getPublicProfile ? user.getPublicProfile() : { id: user._id, name: user.name, email: user.email }
       });
       
     } catch (error) {
