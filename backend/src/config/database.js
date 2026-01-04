@@ -1,7 +1,6 @@
 /**
  * MongoDB Database Configuration
- * 
- * Handles connection to MongoDB database with proper error handling
+ * * Handles connection to MongoDB database with proper error handling
  * and connection pooling for optimal performance.
  */
 
@@ -14,11 +13,9 @@ const mongoose = require('mongoose');
 const connectDatabase = async () => {
   try {
     const options = {
-      // Use new URL parser
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      // REMOVED: useNewUrlParser & useUnifiedTopology (Deprecated/Default in Mongoose 6+)
       
-      // Connection pool settings
+      // Connection pool settings (Still good to have)
       maxPoolSize: 10,
       minPoolSize: 5,
       
@@ -49,7 +46,9 @@ const connectDatabase = async () => {
     });
 
   } catch (error) {
+    // Print only the message to keep logs clean, or full error for debugging
     console.error('❌ MongoDB connection failed:', error.message);
+    // process.exit(1); // Optional: Stop the app if DB fails to connect
     throw error;
   }
 };
