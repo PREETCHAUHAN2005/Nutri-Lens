@@ -3,4 +3,7 @@
 
  # Project Info
  It is a web app which provides info of product ingridients just by scanning the label of the product.
+ # Features
+ Label Scanner
+
 
